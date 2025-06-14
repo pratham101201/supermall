@@ -9,16 +9,20 @@ import {
   Badge,
   Zap
 } from 'lucide-react';
+import { useShops } from '../../hooks/useApi';
 
 const FeaturedShops = () => {
-  const featuredShops = [
+  const { data: shopsData, loading, error } = useShops();
+  
+  // Use API data or fallback to static data
+  const featuredShops = shopsData?.shops?.slice(0, 4) || [
     {
       id: 1,
       name: 'Fashion Hub',
       category: 'Fashion & Clothing',
-      image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
+      image_url: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
       rating: 4.8,
-      reviews: 234,
+      total_reviews: 234,
       location: 'Downtown Mall, Level 2',
       isOpen: true,
       badge: 'Premium',
@@ -28,9 +32,9 @@ const FeaturedShops = () => {
       id: 2,
       name: 'TechnoWorld',
       category: 'Electronics',
-      image: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg',
+      image_url: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg',
       rating: 4.7,
-      reviews: 189,
+      total_reviews: 189,
       location: 'Tech Center, Ground Floor',
       isOpen: true,
       badge: 'Trending',
@@ -40,9 +44,9 @@ const FeaturedShops = () => {
       id: 3,
       name: 'Gourmet Kitchen',
       category: 'Food & Dining',
-      image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+      image_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
       rating: 4.9,
-      reviews: 412,
+      total_reviews: 412,
       location: 'Food Court, Level 3',
       isOpen: false,
       badge: 'Popular',
@@ -52,9 +56,9 @@ const FeaturedShops = () => {
       id: 4,
       name: 'Beauty Boutique',
       category: 'Health & Beauty',
-      image: 'https://images.pexels.com/photos/853151/pexels-photo-853151.jpeg',
+      image_url: 'https://images.pexels.com/photos/853151/pexels-photo-853151.jpeg',
       rating: 4.6,
-      reviews: 156,
+      total_reviews: 156,
       location: 'Cosmetics Wing, Level 1',
       isOpen: true,
       badge: 'New',
@@ -68,6 +72,34 @@ const FeaturedShops = () => {
     Popular: 'bg-gradient-to-r from-pink-500 to-rose-500',
     New: 'bg-gradient-to-r from-blue-500 to-indigo-500'
   };
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded w-64 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 rounded w-96 mx-auto"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-300"></div>
+                <div className="p-6">
+                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-4 w-3/4"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-4 w-1/2"></div>
+                  <div className="h-10 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
@@ -103,33 +135,33 @@ const FeaturedShops = () => {
               {/* Shop Image */}
               <div className="relative overflow-hidden">
                 <img
-                  src={shop.image}
+                  src={shop.image_url || shop.image}
                   alt={shop.name}
                   className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 
                 {/* Badge */}
-                <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-white text-sm font-semibold ${badgeColors[shop.badge]}`}>
-                  {shop.badge}
+                <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-white text-sm font-semibold ${badgeColors[shop.badge] || 'bg-gradient-to-r from-blue-500 to-purple-500'}`}>
+                  {shop.badge || 'Featured'}
                 </div>
 
                 {/* Status */}
                 <div className="absolute top-4 right-4">
                   <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                    shop.isOpen 
+                    shop.isOpen || shop.is_active
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      shop.isOpen ? 'bg-green-400' : 'bg-red-400'
+                      shop.isOpen || shop.is_active ? 'bg-green-400' : 'bg-red-400'
                     }`}></div>
-                    <span>{shop.isOpen ? 'Open' : 'Closed'}</span>
+                    <span>{shop.isOpen || shop.is_active ? 'Open' : 'Closed'}</span>
                   </div>
                 </div>
 
                 {/* Offers */}
                 <div className="absolute bottom-4 left-4 right-4">
-                  {shop.offers.slice(0, 1).map((offer, idx) => (
+                  {(shop.offers || ['Special Offers']).slice(0, 1).map((offer, idx) => (
                     <div key={idx} className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-lg text-sm font-medium backdrop-blur-sm">
                       <Zap className="w-3 h-3 inline mr-1" />
                       {offer}
@@ -151,15 +183,15 @@ const FeaturedShops = () => {
                 <div className="flex items-center space-x-2 mb-3">
                   <div className="flex items-center space-x-1">
                     <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    <span className="text-gray-900 font-semibold">{shop.rating}</span>
+                    <span className="text-gray-900 font-semibold">{shop.rating || 4.5}</span>
                   </div>
-                  <span className="text-gray-500 text-sm">({shop.reviews} reviews)</span>
+                  <span className="text-gray-500 text-sm">({shop.total_reviews || shop.reviews || 0} reviews)</span>
                 </div>
 
                 {/* Location */}
                 <div className="flex items-center space-x-2 text-gray-600 text-sm mb-4">
                   <MapPin className="w-4 h-4" />
-                  <span>{shop.location}</span>
+                  <span>{shop.location || shop.address}</span>
                 </div>
 
                 {/* View Shop Button */}

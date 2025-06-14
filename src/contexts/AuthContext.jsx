@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import apiService from '../services/api';
 
 const AuthContext = createContext();
 
@@ -19,13 +20,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          // Get user profile from Firestore
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
+            const profile = userDoc.data();
+            setUserProfile(profile);
+            
+            // Set token for API calls if available
+            if (profile.backendToken) {
+              apiService.setToken(profile.backendToken);
+            }
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
@@ -33,6 +41,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null);
         setUserProfile(null);
+        apiService.setToken(null);
       }
       setLoading(false);
     });
@@ -43,7 +52,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     userProfile,
-    loading
+    loading,
+    setUserProfile
   };
 
   return (

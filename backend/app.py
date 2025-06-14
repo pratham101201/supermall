@@ -8,27 +8,53 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///supermall.db'
+
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///supermall.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-string')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
+# Initialize extensions
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
-CORS(app)
+CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
 
 # Database Models
 class User(db.Model):
+    __tablename__ = 'users'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default='customer')  # customer, shop_owner, admin
+    phone = db.Column(db.String(20))
+    profile_image = db.Column(db.String(500))
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    shops = db.relationship('Shop', backref='owner', lazy=True)
+    reviews = db.relationship('Review', backref='user', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'role': self.role,
+            'phone': self.phone,
+            'profile_image': self.profile_image,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
 class Shop(db.Model):
+    __tablename__ = 'shops'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
@@ -39,7 +65,7 @@ class Shop(db.Model):
     email = db.Column(db.String(120))
     website = db.Column(db.String(200))
     image_url = db.Column(db.String(500))
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     rating = db.Column(db.Float, default=0.0)
     total_reviews = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
@@ -48,28 +74,71 @@ class Shop(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    products = db.relationship('Product', backref='shop', lazy=True)
+    offers = db.relationship('Offer', backref='shop', lazy=True)
+    reviews = db.relationship('Review', backref='shop', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'location': self.location,
+            'address': self.address,
+            'phone': self.phone,
+            'email': self.email,
+            'website': self.website,
+            'image_url': self.image_url,
+            'rating': self.rating,
+            'total_reviews': self.total_reviews,
+            'is_active': self.is_active,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
 class Product(db.Model):
+    __tablename__ = 'products'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     price = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
-    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shops.id'), nullable=False)
     image_url = db.Column(db.String(500))
     stock_quantity = db.Column(db.Integer, default=0)
     is_available = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'price': self.price,
+            'category': self.category,
+            'shop_id': self.shop_id,
+            'image_url': self.image_url,
+            'stock_quantity': self.stock_quantity,
+            'is_available': self.is_available,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
 class Offer(db.Model):
+    __tablename__ = 'offers'
+    
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     discount_percentage = db.Column(db.Float)
     discount_amount = db.Column(db.Float)
     offer_type = db.Column(db.String(20), nullable=False)  # percentage, amount, bogo, free_delivery
-    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shops.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
@@ -77,13 +146,44 @@ class Offer(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    def to_dict(self):
+        shop = Shop.query.get(self.shop_id)
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'discount_percentage': self.discount_percentage,
+            'discount_amount': self.discount_amount,
+            'offer_type': self.offer_type,
+            'shop_id': self.shop_id,
+            'shop_name': shop.name if shop else '',
+            'product_id': self.product_id,
+            'start_date': self.start_date.isoformat(),
+            'end_date': self.end_date.isoformat(),
+            'is_active': self.is_active,
+            'image_url': self.image_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
 class Review(db.Model):
+    __tablename__ = 'reviews'
+    
     id = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shops.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rating': self.rating,
+            'comment': self.comment,
+            'user_id': self.user_id,
+            'shop_id': self.shop_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 # Authentication Routes
 @app.route('/api/auth/register', methods=['POST'])
@@ -118,15 +218,11 @@ def register():
         return jsonify({
             'message': 'User registered successfully',
             'access_token': access_token,
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.email,
-                'role': user.role
-            }
+            'user': user.to_dict()
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -150,12 +246,7 @@ def login():
         return jsonify({
             'message': 'Login successful',
             'access_token': access_token,
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.email,
-                'role': user.role
-            }
+            'user': user.to_dict()
         }), 200
         
     except Exception as e:
@@ -166,24 +257,9 @@ def login():
 def get_shops():
     try:
         shops = Shop.query.filter_by(is_active=True).all()
-        
-        shops_data = []
-        for shop in shops:
-            shops_data.append({
-                'id': shop.id,
-                'name': shop.name,
-                'description': shop.description,
-                'category': shop.category,
-                'location': shop.location,
-                'image_url': shop.image_url,
-                'rating': shop.rating,
-                'total_reviews': shop.total_reviews,
-                'latitude': shop.latitude,
-                'longitude': shop.longitude
-            })
-        
-        return jsonify({'shops': shops_data}), 200
-        
+        return jsonify({
+            'shops': [shop.to_dict() for shop in shops]
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -221,41 +297,18 @@ def create_shop():
         
         return jsonify({
             'message': 'Shop created successfully',
-            'shop': {
-                'id': shop.id,
-                'name': shop.name,
-                'category': shop.category,
-                'location': shop.location
-            }
+            'shop': shop.to_dict()
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/shops/<int:shop_id>', methods=['GET'])
 def get_shop(shop_id):
     try:
         shop = Shop.query.get_or_404(shop_id)
-        
-        return jsonify({
-            'shop': {
-                'id': shop.id,
-                'name': shop.name,
-                'description': shop.description,
-                'category': shop.category,
-                'location': shop.location,
-                'address': shop.address,
-                'phone': shop.phone,
-                'email': shop.email,
-                'website': shop.website,
-                'image_url': shop.image_url,
-                'rating': shop.rating,
-                'total_reviews': shop.total_reviews,
-                'latitude': shop.latitude,
-                'longitude': shop.longitude
-            }
-        }), 200
-        
+        return jsonify({'shop': shop.to_dict()}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -276,20 +329,9 @@ def get_products():
         
         products = query.all()
         
-        products_data = []
-        for product in products:
-            products_data.append({
-                'id': product.id,
-                'name': product.name,
-                'description': product.description,
-                'price': product.price,
-                'category': product.category,
-                'shop_id': product.shop_id,
-                'image_url': product.image_url,
-                'stock_quantity': product.stock_quantity
-            })
-        
-        return jsonify({'products': products_data}), 200
+        return jsonify({
+            'products': [product.to_dict() for product in products]
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -328,15 +370,11 @@ def create_product():
         
         return jsonify({
             'message': 'Product created successfully',
-            'product': {
-                'id': product.id,
-                'name': product.name,
-                'price': product.price,
-                'category': product.category
-            }
+            'product': product.to_dict()
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Offer Routes
@@ -350,24 +388,9 @@ def get_offers():
             Offer.end_date >= current_date
         ).all()
         
-        offers_data = []
-        for offer in offers:
-            shop = Shop.query.get(offer.shop_id)
-            offers_data.append({
-                'id': offer.id,
-                'title': offer.title,
-                'description': offer.description,
-                'discount_percentage': offer.discount_percentage,
-                'discount_amount': offer.discount_amount,
-                'offer_type': offer.offer_type,
-                'shop_id': offer.shop_id,
-                'shop_name': shop.name if shop else '',
-                'start_date': offer.start_date.isoformat(),
-                'end_date': offer.end_date.isoformat(),
-                'image_url': offer.image_url
-            })
-        
-        return jsonify({'offers': offers_data}), 200
+        return jsonify({
+            'offers': [offer.to_dict() for offer in offers]
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -413,14 +436,11 @@ def create_offer():
         
         return jsonify({
             'message': 'Offer created successfully',
-            'offer': {
-                'id': offer.id,
-                'title': offer.title,
-                'offer_type': offer.offer_type
-            }
+            'offer': offer.to_dict()
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Review Routes
@@ -450,22 +470,20 @@ def create_review():
         # Update shop rating
         shop = Shop.query.get(data['shop_id'])
         reviews = Review.query.filter_by(shop_id=data['shop_id']).all()
-        total_rating = sum([r.rating for r in reviews])
-        shop.rating = total_rating / len(reviews)
-        shop.total_reviews = len(reviews)
+        if reviews:
+            total_rating = sum([r.rating for r in reviews])
+            shop.rating = total_rating / len(reviews)
+            shop.total_reviews = len(reviews)
         
         db.session.commit()
         
         return jsonify({
             'message': 'Review created successfully',
-            'review': {
-                'id': review.id,
-                'rating': review.rating,
-                'comment': review.comment
-            }
+            'review': review.to_dict()
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Search Route
@@ -508,22 +526,8 @@ def search():
         products = product_query.all()
         
         result = {
-            'shops': [{
-                'id': shop.id,
-                'name': shop.name,
-                'category': shop.category,
-                'location': shop.location,
-                'rating': shop.rating,
-                'image_url': shop.image_url
-            } for shop in shops],
-            'products': [{
-                'id': product.id,
-                'name': product.name,
-                'price': product.price,
-                'category': product.category,
-                'shop_id': product.shop_id,
-                'image_url': product.image_url
-            } for product in products]
+            'shops': [shop.to_dict() for shop in shops],
+            'products': [product.to_dict() for product in products]
         }
         
         return jsonify(result), 200
@@ -531,12 +535,27 @@ def search():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Initialize database
-@app.before_first_request
-def create_tables():
-    db.create_all()
+# Health check route
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy', 'message': 'SuperMall API is running'}), 200
 
-if __name__ == '__main__':
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return jsonify({'error': 'Internal server error'}), 500
+
+# Initialize database
+def create_tables():
     with app.app_context():
         db.create_all()
+        print("Database tables created successfully!")
+
+if __name__ == '__main__':
+    create_tables()
     app.run(debug=True, host='0.0.0.0', port=5000)

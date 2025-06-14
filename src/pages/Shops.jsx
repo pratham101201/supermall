@@ -10,12 +10,15 @@ import {
   List,
   SlidersHorizontal
 } from 'lucide-react';
+import { useShops } from '../hooks/useApi';
 
 const Shops = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
+
+  const { data: shopsData, loading, error } = useShops();
 
   const categories = [
     'All Categories',
@@ -28,31 +31,7 @@ const Shops = () => {
     'Books & Media'
   ];
 
-  const shops = [
-    {
-      id: 1,
-      name: 'Fashion Hub',
-      category: 'Fashion & Clothing',
-      image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
-      rating: 4.8,
-      reviews: 234,
-      location: 'Downtown Mall, Level 2',
-      isOpen: true,
-      description: 'Premium fashion destination with latest trends and designer collections.'
-    },
-    {
-      id: 2,
-      name: 'TechnoWorld',
-      category: 'Electronics',
-      image: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg',
-      rating: 4.7,
-      reviews: 189,
-      location: 'Tech Center, Ground Floor',
-      isOpen: true,
-      description: 'Your one-stop shop for all electronic gadgets and accessories.'
-    },
-    // Add more shops as needed
-  ];
+  const shops = shopsData?.shops || [];
 
   const filteredShops = shops.filter(shop => {
     const matchesSearch = shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,6 +39,46 @@ const Shops = () => {
     const matchesCategory = selectedCategory === 'all' || shop.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded w-64 mb-4"></div>
+            <div className="h-4 bg-gray-300 rounded w-96 mb-8"></div>
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+              <div className="h-12 bg-gray-300 rounded"></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {[...Array(8)].map((_, index) => (
+                <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                  <div className="h-48 bg-gray-300"></div>
+                  <div className="p-6">
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded mb-4 w-3/4"></div>
+                    <div className="h-3 bg-gray-300 rounded mb-4 w-1/2"></div>
+                    <div className="h-10 bg-gray-300 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Shops</h2>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -191,7 +210,7 @@ const Shops = () => {
               {/* Shop Image */}
               <div className={`relative overflow-hidden ${viewMode === 'list' ? 'w-64' : ''}`}>
                 <img
-                  src={shop.image}
+                  src={shop.image_url || 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg'}
                   alt={shop.name}
                   className={`object-cover hover:scale-110 transition-transform duration-300 ${
                     viewMode === 'list' ? 'w-full h-full' : 'w-full h-48'
@@ -201,14 +220,14 @@ const Shops = () => {
                 {/* Status */}
                 <div className="absolute top-4 right-4">
                   <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                    shop.isOpen 
+                    shop.is_active 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      shop.isOpen ? 'bg-green-400' : 'bg-red-400'
+                      shop.is_active ? 'bg-green-400' : 'bg-red-400'
                     }`}></div>
-                    <span>{shop.isOpen ? 'Open' : 'Closed'}</span>
+                    <span>{shop.is_active ? 'Open' : 'Closed'}</span>
                   </div>
                 </div>
               </div>
@@ -222,7 +241,7 @@ const Shops = () => {
                   <p className="text-gray-600 text-sm">{shop.category}</p>
                 </div>
 
-                {viewMode === 'list' && (
+                {viewMode === 'list' && shop.description && (
                   <p className="text-gray-600 mb-4">{shop.description}</p>
                 )}
 
@@ -230,15 +249,15 @@ const Shops = () => {
                 <div className="flex items-center space-x-2 mb-3">
                   <div className="flex items-center space-x-1">
                     <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    <span className="text-gray-900 font-semibold">{shop.rating}</span>
+                    <span className="text-gray-900 font-semibold">{shop.rating || 4.5}</span>
                   </div>
-                  <span className="text-gray-500 text-sm">({shop.reviews} reviews)</span>
+                  <span className="text-gray-500 text-sm">({shop.total_reviews || 0} reviews)</span>
                 </div>
 
                 {/* Location */}
                 <div className="flex items-center space-x-2 text-gray-600 text-sm mb-4">
                   <MapPin className="w-4 h-4" />
-                  <span>{shop.location}</span>
+                  <span>{shop.location || shop.address}</span>
                 </div>
 
                 {/* View Shop Button */}

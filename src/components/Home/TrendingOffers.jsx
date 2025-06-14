@@ -11,98 +11,47 @@ import {
   Zap,
   TrendingUp
 } from 'lucide-react';
+import { useOffers } from '../../hooks/useApi';
 
 const TrendingOffers = () => {
-  const offers = [
+  const { data: offersData, loading, error } = useOffers();
+  
+  // Use API data or fallback to static data
+  const offers = offersData?.offers?.slice(0, 6) || [
     {
       id: 1,
       title: 'Summer Fashion Sale',
       description: 'Get up to 70% off on summer collection',
-      shop: 'Fashion Hub',
+      shop_name: 'Fashion Hub',
       category: 'Fashion',
-      discount: '70%',
-      originalPrice: 299,
-      salePrice: 89,
-      image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
-      expiresIn: '2 days',
-      type: 'percentage',
-      isTrending: true,
+      discount_percentage: 70,
+      image_url: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
+      offer_type: 'percentage',
+      end_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
       rating: 4.8
     },
     {
       id: 2,
       title: 'Tech Gadgets Bonanza',
       description: 'Latest smartphones and accessories',
-      shop: 'TechnoWorld',
+      shop_name: 'TechnoWorld',
       category: 'Electronics',
-      discount: '45%',
-      originalPrice: 899,
-      salePrice: 494,
-      image: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg',
-      expiresIn: '5 days',
-      type: 'percentage',
-      isTrending: true,
+      discount_percentage: 45,
+      image_url: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg',
+      offer_type: 'percentage',
+      end_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       rating: 4.7
     },
     {
       id: 3,
       title: 'Buy 1 Get 1 Free',
       description: 'Special deal on all beauty products',
-      shop: 'Beauty Boutique',
+      shop_name: 'Beauty Boutique',
       category: 'Beauty',
-      discount: 'BOGO',
-      originalPrice: 149,
-      salePrice: 149,
-      image: 'https://images.pexels.com/photos/853151/pexels-photo-853151.jpeg',
-      expiresIn: '1 week',
-      type: 'bogo',
-      isTrending: false,
+      image_url: 'https://images.pexels.com/photos/853151/pexels-photo-853151.jpeg',
+      offer_type: 'bogo',
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       rating: 4.6
-    },
-    {
-      id: 4,
-      title: 'Happy Hour Special',
-      description: 'All beverages at 50% off from 3-6 PM',
-      shop: 'Gourmet Kitchen',
-      category: 'Food',
-      discount: '50%',
-      originalPrice: 25,
-      salePrice: 12.5,
-      image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-      expiresIn: 'Daily',
-      type: 'percentage',
-      isTrending: true,
-      rating: 4.9
-    },
-    {
-      id: 5,
-      title: 'Electronics Clearance',
-      description: 'Limited time offer on selected items',
-      shop: 'TechnoWorld',
-      category: 'Electronics',
-      discount: '60%',
-      originalPrice: 599,
-      salePrice: 239,
-      image: 'https://images.pexels.com/photos/1714208/pexels-photo-1714208.jpeg',
-      expiresIn: '3 days',
-      type: 'percentage',
-      isTrending: false,
-      rating: 4.5
-    },
-    {
-      id: 6,
-      title: 'Weekend Special',
-      description: 'Free delivery on orders above $50',
-      shop: 'Fashion Hub',
-      category: 'Fashion',
-      discount: 'Free Delivery',
-      originalPrice: 0,
-      salePrice: 0,
-      image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg',
-      expiresIn: 'Weekend',
-      type: 'free_delivery',
-      isTrending: false,
-      rating: 4.7
     }
   ];
 
@@ -132,6 +81,49 @@ const TrendingOffers = () => {
     }
   };
 
+  const getTimeRemaining = (endDate) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = end - now;
+    
+    if (diff <= 0) return 'Expired';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    if (days > 0) return `${days} days left`;
+    if (hours > 0) return `${hours} hours left`;
+    return 'Ending soon';
+  };
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded w-64 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 rounded w-96 mx-auto"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-300"></div>
+                <div className="p-6">
+                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-4 w-3/4"></div>
+                  <div className="h-3 bg-gray-300 rounded mb-4 w-1/2"></div>
+                  <div className="h-10 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,7 +146,13 @@ const TrendingOffers = () => {
         {/* Offers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {offers.map((offer, index) => {
-            const DiscountIcon = getDiscountIcon(offer.type);
+            const DiscountIcon = getDiscountIcon(offer.offer_type);
+            const discountText = offer.offer_type === 'percentage' 
+              ? `${offer.discount_percentage}%` 
+              : offer.offer_type === 'bogo' 
+                ? 'BOGO' 
+                : 'FREE';
+            
             return (
               <motion.div
                 key={offer.id}
@@ -168,29 +166,27 @@ const TrendingOffers = () => {
                 {/* Offer Image */}
                 <div className="relative overflow-hidden">
                   <img
-                    src={offer.image}
+                    src={offer.image_url}
                     alt={offer.title}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   
                   {/* Discount Badge */}
-                  <div className={`absolute top-4 left-4 px-4 py-2 rounded-full bg-gradient-to-r ${getDiscountColor(offer.type)} text-white font-bold text-sm shadow-lg`}>
+                  <div className={`absolute top-4 left-4 px-4 py-2 rounded-full bg-gradient-to-r ${getDiscountColor(offer.offer_type)} text-white font-bold text-sm shadow-lg`}>
                     <DiscountIcon className="w-4 h-4 inline mr-1" />
-                    {offer.discount} OFF
+                    {discountText} OFF
                   </div>
 
                   {/* Trending Badge */}
-                  {offer.isTrending && (
-                    <div className="absolute top-4 right-4 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-xs font-semibold flex items-center space-x-1">
-                      <TrendingUp className="w-3 h-3" />
-                      <span>Trending</span>
-                    </div>
-                  )}
+                  <div className="absolute top-4 right-4 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-xs font-semibold flex items-center space-x-1">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>Trending</span>
+                  </div>
 
                   {/* Timer */}
                   <div className="absolute bottom-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-lg text-xs font-medium backdrop-blur-sm flex items-center space-x-1">
                     <Clock className="w-3 h-3" />
-                    <span>{offer.expiresIn} left</span>
+                    <span>{getTimeRemaining(offer.end_date)}</span>
                   </div>
                 </div>
 
@@ -204,35 +200,16 @@ const TrendingOffers = () => {
                     
                     {/* Shop & Category */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700 font-medium">{offer.shop}</span>
+                      <span className="text-gray-700 font-medium">{offer.shop_name}</span>
                       <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">{offer.category}</span>
                     </div>
                   </div>
-
-                  {/* Pricing */}
-                  {offer.type !== 'free_delivery' && (
-                    <div className="flex items-center space-x-3 mb-4">
-                      {offer.originalPrice > 0 && (
-                        <span className="text-gray-400 line-through text-sm">
-                          ${offer.originalPrice}
-                        </span>
-                      )}
-                      <span className="text-2xl font-bold text-red-600">
-                        ${offer.salePrice}
-                      </span>
-                      {offer.type === 'bogo' && (
-                        <span className="text-green-600 font-semibold text-sm">
-                          + 1 Free
-                        </span>
-                      )}
-                    </div>
-                  )}
 
                   {/* Rating */}
                   <div className="flex items-center space-x-2 mb-4">
                     <div className="flex items-center space-x-1">
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-gray-900 font-semibold text-sm">{offer.rating}</span>
+                      <span className="text-gray-900 font-semibold text-sm">{offer.rating || 4.5}</span>
                     </div>
                     <span className="text-gray-500 text-sm">Highly Rated</span>
                   </div>
